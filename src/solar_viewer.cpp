@@ -414,20 +414,20 @@ void Solar_viewer::paint()
 void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
 {
     switch (curve_display_mode_) {
-        case CURVE_SHOW_PATH_FRAME:
-            ship_path_frame_.draw(solid_color_shader_, _projection * _view, ship_path_(ship_path_param_));
-        case CURVE_SHOW_PATH_CP:
-            solid_color_shader_.use();
-            solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
-            solid_color_shader_.set_uniform("color", vec4(0.8, 0.8, 0.8, 1.0));
-            ship_path_cp_renderer_.draw();
-        case CURVE_SHOW_PATH:
-            solid_color_shader_.use();
-            solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
-            solid_color_shader_.set_uniform("color", vec4(1.0, 0.0, 0.0, 1.0));
-            ship_path_renderer_.draw();
-        default:
-            break;
+    case CURVE_SHOW_PATH_FRAME:
+        ship_path_frame_.draw(solid_color_shader_, _projection * _view, ship_path_(ship_path_param_));
+    case CURVE_SHOW_PATH_CP:
+        solid_color_shader_.use();
+        solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
+        solid_color_shader_.set_uniform("color", vec4(0.8, 0.8, 0.8, 1.0));
+        ship_path_cp_renderer_.draw();
+    case CURVE_SHOW_PATH:
+        solid_color_shader_.use();
+        solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
+        solid_color_shader_.set_uniform("color", vec4(1.0, 0.0, 0.0, 1.0));
+        ship_path_renderer_.draw();
+    default:
+        break;
     }
 
     // the matrices we need: model, modelview, modelview-projection, normal
@@ -448,6 +448,7 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
     m_matrix = mat4::rotate_y(sun_.angle_self_) * mat4::scale(sun_.radius_);
     mv_matrix = _view * m_matrix;
     mvp_matrix = _projection * mv_matrix;
+
     sun_shader_.use();
     sun_shader_.set_uniform("modelview_projection_matrix", mvp_matrix);
     sun_shader_.set_uniform("t", sun_animation_time, true /* Indicate that time parameter is optional;
@@ -477,9 +478,68 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
      *  Hint: See how it is done for the Sun in the code above.
      */
 
+    //render star background
+    m_matrix = mat4::scale(stars_.radius_);
+    mv_matrix = _view * m_matrix;
+    mvp_matrix = _projection * mv_matrix;
+
+    color_shader_.use();
+    color_shader_.set_uniform("modelview_projection_matrix", mvp_matrix);
+    color_shader_.set_uniform("tex", 0);
+    color_shader_.set_uniform("greyscale", (int)greyscale_);
+    stars_.tex_.bind();
+    unit_sphere_.draw();
+
+    //lambda function for simple planets
+    auto draw_planet = [&](Planet& planet) {
+        m_matrix = mat4::translate(planet.pos_) *
+                   mat4::rotate_y(planet.angle_self_) *
+                   mat4::scale(planet.radius_);
+
+        mv_matrix = _view * m_matrix;
+        mvp_matrix = _projection * mv_matrix;
+
+        color_shader_.use();
+        color_shader_.set_uniform("modelview_projection_matrix", mvp_matrix);
+        color_shader_.set_uniform("tex", 0);
+        color_shader_.set_uniform("greyscale", (int)greyscale_);
+
+        /** Currently lead to "invalid uniform location" errors, but might be useful later
+        *
+        color_shader_.set_uniform("modelview_matrix", mv_matrix);
+        color_shader_.set_uniform("normal_matrix", m_matrix);
+        color_shader_.set_uniform("light_position", light);
+        */
+
+        planet.tex_.bind();
+        unit_sphere_.draw();
+    };
+
+    draw_planet(mercury_);
+    draw_planet(venus_);
+    draw_planet(mars_);
+    draw_planet(earth_);
+    draw_planet(moon_);
+
+    //render spaceship
+    m_matrix = mat4::translate(ship_.pos_) *
+               mat4::rotate_y(ship_.angle_) *
+               mat4::scale(ship_.get_scale());
+
+    mv_matrix = _view * m_matrix;
+    mvp_matrix = _projection * mv_matrix;
+
+    color_shader_.use();
+    color_shader_.set_uniform("modelview_projection_matrix", mvp_matrix);
+    color_shader_.set_uniform("tex", 0);
+    color_shader_.set_uniform("greyscale", (int)greyscale_);
+
+    ship_.tex_.bind();
+    ship_.draw();
+
     // check for OpenGL errors
     glCheckError();
-}
+};
 
 void Solar_viewer::randomize_planets()
 {
