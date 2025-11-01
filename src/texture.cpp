@@ -101,15 +101,62 @@ bool Texture::createSunBillboardTexture()
     int height = 900;
     img.resize(width*height * 4);
 
-    for (int col = 0; col < width; ++col) {
-        for (int row = 0; row < height; ++row) {
-            img[(row * width + col) * 4 + 0] = 255; // R
-            img[(row * width + col) * 4 + 1] = 255; // G
-            img[(row * width + col) * 4 + 2] = 255; // B
-            img[(row * width + col) * 4 + 3] = 255; // A
+    /** \todo Set up the texture for the sun billboard.
+  *   - Draw an opaque circle with a 150 pixel radius in its middle
+  *   - Outside that circle the texture should become more and more transparent to mimic a nice glow effect
+  *   - Make sure that your texture is fully transparent at its borders to avoid seeing visible edges
+  *   - Experiment with the color and with how fast you change the transparency until the effect satisfies you
+  **/
+
+
+    //assign texture centerpoint
+    float center_x = width / 2.0f;
+    float center_y = height / 2.0f;
+
+    //assign radius values
+    float inner_radius = 150; //full effect strength radius
+    float outer_radius = 450; //gradual fading between inner radius and this
+
+    //base sun glow color to fill
+    uint8_t R = 255;
+    uint8_t G = 110;
+    uint8_t B = 50;
+
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+
+            float dist_x = fabs(x - center_x);
+            float dist_y = fabs(y - center_y);
+            float dist_center = sqrtf((dist_x * dist_x) + (dist_y * dist_y));
+            float alpha;
+
+            if (dist_center < inner_radius) {
+                //color opaque
+                alpha = 1;
+            }
+            else if (dist_center < outer_radius) {
+                //modify alpha based on dist_center
+                float rel_dist = (outer_radius - dist_center) / (outer_radius - inner_radius);
+                float attenuate = 3.5; //soften glow strength towards edges
+                alpha = powf(rel_dist,attenuate);
+                
+                G = std::max((200 * alpha), 120.0f); //add bright highlight close to surface
+            }
+            else 
+            {
+                alpha = 0;
+            }
+
+            uint8_t A = 255 * alpha;
+
+            img[(y * width + x) * 4 + 0] = R;
+            img[(y * width + x) * 4 + 1] = G;
+            img[(y * width + x) * 4 + 2] = B;
+            img[(y * width + x) * 4 + 3] = A;
+
         }
     }
-
     return uploadImage(img, width, height);
 }
 

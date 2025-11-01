@@ -19,19 +19,6 @@ Solar_viewer::Solar_viewer(const char* _title, int _width, int _height)
     : GLFW_window(_title, _width, _height),
       unit_sphere_(50), //level of tesselation
 
-      /** Use the following for better planet distances/sizes (but still not realistic)
-      * To get a true-to-scale solar system, planets would be 20x smaller, and their distance to the sun would be ~11x larger
-      * For example r_mercury/r_sun = 0.0034 and distance_mercury_to_sun/r_sun = 33.3
-      **/
-      //  sun_    (0.0f,              2.0f*(float)(M_PI)/26.0f,   1.0f,    0.0f),
-      //  mercury_(2.0f*(float)(M_PI)/116.0f,  2.0f*(float)(M_PI)/58.5f,   0.068f, -3.1f),
-      //  venus_  (2.0f*(float)(M_PI)/225.0f,  2.0f*(float)(M_PI)/243.0f,  0.174f,   -7.2f),
-      //  earth_  (2.0f*(float)(M_PI)/365.0f,  2.0f*(float)(M_PI),        0.182f,   -9.8f),
-      //  moon_   (2.0f*(float)(M_PI)/27.0f,   0.0f,  0.048f,   -0.5f),
-      //  mars_   (2.0f*(float)(M_PI)/687.0f,  2.0f*(float)(M_PI)*24.0f/25.0f, 0.098f,-13.8f),
-      //  stars_  (0.0f, 0.0f, 30.0f, 0.0f)
-
-      // Even more unrealistic placement/sizing for nicer visualization.
       sun_    (0.0,              2.0*M_PI/26.0,   1.0f,    0.0f),
       mercury_(2.0*M_PI/116.0f,  2.0*M_PI/58.5,   0.075f, -1.4f),
       venus_  (2.0*M_PI/225.0f,  2.0*M_PI/243.0,  0.2f,   -2.2f),
@@ -63,145 +50,140 @@ keyboard(int key, int /*scancode*/, int action, int /*mods*/)
     {
         // Change view between the various bodies with keys 1..6
         if ((key >= GLFW_KEY_1) && (key <= GLFW_KEY_6)) {
-            std::array<const Planet *, 6> bodies = { &sun_, &mercury_, &venus_, &earth_, &moon_, &mars_};
+            std::array<const Planet*, 6> bodies = { &sun_, &mercury_, &venus_, &earth_, &moon_, &mars_ };
             in_ship_ = false;
             planet_to_look_at_ = bodies.at(key - GLFW_KEY_1);
         }
         switch (key)
         {
             // Key 7 switches to viewing the ship.
-            case GLFW_KEY_7:
-            {
-                planet_to_look_at_ = NULL;
-                in_ship_ = true;
-                break;
-            }
+        case GLFW_KEY_7:
+        {
+            planet_to_look_at_ = NULL;
+            in_ship_ = true;
+            break;
+        }
 
-            /** \todo Implement the ability to change the viewer's distance to the celestial body.
-             *    - key 9 should increase and key 8 should decrease the `dist_factor_`
-             *    - 2.5 < `dist_factor_` < 20.0
-             */
+        case GLFW_KEY_8:
+        {
+            dist_factor_ = std::max(2.5f, dist_factor_ - 0.1f);
+            break;
+        }
 
-            case GLFW_KEY_8:
-            {
-                dist_factor_ = std::max(2.5f, dist_factor_ - 0.1f);
-                break;
-            }
+        case GLFW_KEY_9:
+        {
+            dist_factor_ = std::min(20.0f, dist_factor_ + 0.1f);
+            break;
+        }
 
-            case GLFW_KEY_9:
-            {
-                dist_factor_ = std::min(20.0f, dist_factor_ + 0.1f);
-                break;
-            }
+        case GLFW_KEY_R:
+        {
+            randomize_planets();
+            break;
+        }
 
-            case GLFW_KEY_R:
-            {
-                randomize_planets();
-                break;
-            }
+        case GLFW_KEY_G:
+        {
+            greyscale_ = !greyscale_;
+            break;
+        }
 
-            case GLFW_KEY_G:
-            {
-                greyscale_ = !greyscale_;
-                break;
-            }
+        case GLFW_KEY_W:
+        {
+            if (in_ship_)
+                ship_.accelerate(0.001f);
+            break;
+        }
+        case GLFW_KEY_S:
+        {
+            if (in_ship_)
+                ship_.accelerate(-0.001f);
+            break;
+        }
+        case GLFW_KEY_A:
+        {
+            if (in_ship_)
+                ship_.accelerate_angular(0.02f);
+            break;
+        }
+        case GLFW_KEY_D:
+        {
+            if (in_ship_)
+                ship_.accelerate_angular(-0.02f);
+            break;
+        }
 
-            case GLFW_KEY_W:
-            {
-                if (in_ship_)
-                    ship_.accelerate(0.001f);
-                break;
-            }
-            case GLFW_KEY_S:
-            {
-                if (in_ship_)
-                    ship_.accelerate(-0.001f);
-                break;
-            }
-            case GLFW_KEY_A:
-            {
-                if (in_ship_)
-                    ship_.accelerate_angular(0.02f);
-                break;
-            }
-            case GLFW_KEY_D:
-            {
-                if (in_ship_)
-                    ship_.accelerate_angular(-0.02f);
-                break;
-            }
+        case GLFW_KEY_C:
+            curve_display_mode_ = CurveDisplayMode((int(curve_display_mode_) + 1) % int(CURVE_SHOW_NUM_MODES));
+            break;
+        case GLFW_KEY_T:
+            ship_path_frame_.toggleParallelTransport();
+            std::cout << (ship_path_frame_.usingParallelTransport() ? "enabled" : "diabled") << " parallel transport" << std::endl;
+            break;
 
-            case GLFW_KEY_C:
-                curve_display_mode_ = CurveDisplayMode((int(curve_display_mode_) + 1) % int(CURVE_SHOW_NUM_MODES));
-                break;
-            case GLFW_KEY_T:
-                ship_path_frame_.toggleParallelTransport();
-                std::cout << (ship_path_frame_.usingParallelTransport() ? "enabled" : "diabled") << " parallel transport" << std::endl;
-                break;
+        case GLFW_KEY_LEFT:
+        {
+            y_angle_ -= 10.0;
+            break;
+        }
 
-            case GLFW_KEY_LEFT:
-            {
-                y_angle_ -= 10.0;
-                break;
-            }
+        case GLFW_KEY_RIGHT:
+        {
+            y_angle_ += 10.0;
+            break;
+        }
 
-            case GLFW_KEY_RIGHT:
-            {
-                y_angle_ += 10.0;
-                break;
-            }
+        case GLFW_KEY_DOWN:
+        {
+            x_angle_ += 10.0;
+            break;
+        }
 
-            case GLFW_KEY_DOWN:
-            {
-                x_angle_ += 10.0;
-                break;
-            }
+        case GLFW_KEY_UP:
+        {
+            x_angle_ -= 10.0;
+            break;
+        }
 
-            case GLFW_KEY_UP:
-            {
-                x_angle_ -= 10.0;
-                break;
-            }
+        case GLFW_KEY_SPACE:
+        {
+            timer_active_ = !timer_active_;
+            break;
+        }
 
-            case GLFW_KEY_SPACE:
-            {
-                timer_active_ = !timer_active_;
-                break;
-            }
+        case GLFW_KEY_P:
+        case GLFW_KEY_KP_ADD:
+        case GLFW_KEY_EQUAL:
+        {
+            time_step_ *= 2.0f;
+            std::cout << "Time step: " << time_step_ << " days\n";
+            break;
+        }
 
-            case GLFW_KEY_P:
-            case GLFW_KEY_KP_ADD:
-            case GLFW_KEY_EQUAL:
-            {
-                time_step_ *= 2.0f;
-                std::cout << "Time step: " << time_step_ << " days\n";
-                break;
-            }
+        case GLFW_KEY_M:
+        case GLFW_KEY_KP_SUBTRACT:
+        case GLFW_KEY_MINUS:
+        {
+            time_step_ *= 0.5f;
+            std::cout << "Time step: " << time_step_ << " days\n";
+            break;
+        }
 
-            case GLFW_KEY_M:
-            case GLFW_KEY_KP_SUBTRACT:
-            case GLFW_KEY_MINUS:
-            {
-                time_step_ *= 0.5f;
-                std::cout << "Time step: " << time_step_ << " days\n";
-                break;
-            }
+        case GLFW_KEY_J:
+        {
+            std::cout << "Reloading shaders..." << std::endl;
+            color_shader_.reload();
+            phong_shader_.reload();
+            earth_shader_.reload();
+            sun_shader_.reload();
 
-            case GLFW_KEY_J:
-            {
-                std::cout << "Reloading shaders..." << std::endl;
-                color_shader_.reload();
-                phong_shader_.reload();
-                earth_shader_.reload();
-                sun_shader_.reload();
-
-                break;
-            }
-            case GLFW_KEY_ESCAPE:
-            {
-                glfwSetWindowShouldClose(window_, GL_TRUE);
-                break;
-            }
+            break;
+        }
+        case GLFW_KEY_ESCAPE:
+        {
+            glfwSetWindowShouldClose(window_, GL_TRUE);
+            break;
+        }
         }
     }
 }
@@ -210,15 +192,7 @@ keyboard(int key, int /*scancode*/, int action, int /*mods*/)
 // around their orbits. This position is needed to set up the camera in the scene
 // (see Solar_viewer::paint)
 void Solar_viewer::update_body_positions() {
-    /** \todo Update the position of the planets based on their distance to their orbit's center
-     * and their angular displacement around the orbit. Planets should follow a circular
-     * orbit in the x-z plane, moving in a clockwise direction around the
-     * positive y axis. "angle_orbit_ = 0" should correspond to a position on the x axis.
-     * Note: planets will orbit around the sun, which is always positioned at the origin,
-     *       but the moon orbits around the earth! Only visualize mercury, venus, earth, mars,
-     *       and earth's moon. Do not explicitly place the space ship, its position
-     *       is fixed for now.
-     * */
+    
     sun_.pos_ = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 
@@ -356,27 +330,7 @@ void Solar_viewer::paint()
     // clear framebuffer and depth buffer first
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    /** \todo Implement navigation through the solar system.
-     *   - Allow camera rotation by modifying the view matrix.
-     *     `x_angle_` and `y_angle` hold the necessary information and are
-     *     updated by key presses (see `Solar_viewer::keyboard(...)`).
-     *   - Position the camera at distance `dist_factor_` from the planet's center (in units of planet radii).
-     *     This distance should be controlled by keys 8 and 9.
-     *   - When keys `1` to `6` are pressed, the camera should move to look at
-     *     the corresponding celestial body (this functionality is already provided,
-     *     see `Solar_viewer::keyboard(...)`).
-     *   - Pointer `planet_to_look_at_` stores the current body to view.
-     *   - When you are in spaceship mode (member in_ship_), the camera should
-     *     hover slightly behind and above the ship and rotate along with it (so that
-     *     when the ship moves and turns it always remains stationary in view
-     *     while the solar system moves and spins around it).
-     *
-     *  Hint: planet centers are stored in "Planet::pos_".
-     */
-    // clear framebuffer and depth buffer first
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
+    // --- Compute camera ---
     vec4 eye, center, up = vec4(0,1,0,0);
 
     if (in_ship_) {
@@ -401,7 +355,24 @@ void Solar_viewer::paint()
     mat4 view = mat4::look_at(vec3(eye), vec3(center), vec3(up));
     mat4 projection = mat4::perspective(fovy_, (float)width_/(float)height_, near_, far_);
 
-    billboard_x_angle_ = billboard_y_angle_ = 0.0f;
+    /** \todo Orient the billboard used to display the sun's glow
+    *  Update billboard_x_andle_ and billboard_y_angle_ so that the billboard plane
+    *  drawn to produce the sun's halo is orthogonal to the view vector for
+    *  the sun's center.
+    */
+
+    vec3 to_cam = normalize(eye - sun_.pos_);
+
+    // yaw (horizontal) in radians -> degrees
+    float yaw_rad = atan2(to_cam.x, to_cam.z);
+    billboard_y_angle_ = yaw_rad * 180.0f / (float)M_PI;
+
+    // pitch (vertical) in radians -> degrees
+    // clamp y to avoid NaNs from numeric drift
+    float y_clamped = std::max(-1.0f, std::min(1.0f, to_cam.y));
+    float pitch_rad = -asin(y_clamped);
+    billboard_x_angle_ = pitch_rad * 180.0f / (float)M_PI;
+
 
 
     draw_scene(projection, view);
@@ -458,25 +429,17 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
     sun_.tex_.bind();
     unit_sphere_.draw();
 
-    /** \todo Render the star background, the spaceship, and the rest of the celestial bodies.
-     *  For now, everything should be rendered with the color_shader_,
-     *  which expects uniforms "modelview_projection_matrix", "tex" and "grayscale"
-     *  and a single bound texture.
-     *
-     *  For each object, first compute the model matrix
-     *  (similarly to what you did in function update_body_positions()), model-view
-     *  matrix (use already computed _view) and model-view-projection matrix (use
-     *  already computed _projection).
-     *
-     *  Then set up the shader. Make use of the use() function defined in shader.cpp to
-     *  specify the handle of the shader program and set the uniform variables expected by
-     *  the shader.
-     *
-     *  Finally, bind the the texture (such that the sphere would be rendered with given
-     *  texture) and draw the sphere.
-     *
-     *  Hint: See how it is done for the Sun in the code above.
+
+    /** \todo Switch from using color_shader_ to the fancier shaders you'll
+     * implement in this assignment:
+     *      mercury, venus, moon, mars, ship: phong_shader_
+     *      earth: earth_shader_
+     *      stars, sunglow: still use color_shader_
+     *  You'll need to make sure all the GLSL uniform variables are set. For
+     *  Phong shading, you need to pass in the modelview matrix, the normal transformation
+     *  matrix, and light position in addition to the color_shader_ parameters.
      */
+
 
     //render star background
     m_matrix = mat4::scale(stars_.radius_);
@@ -493,8 +456,8 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
     //lambda function for simple planets
     auto draw_planet = [&](Planet& planet) {
         m_matrix = mat4::translate(planet.pos_) *
-                   mat4::rotate_y(planet.angle_self_) *
-                   mat4::scale(planet.radius_);
+            mat4::rotate_y(planet.angle_self_) *
+            mat4::scale(planet.radius_);
 
         mv_matrix = _view * m_matrix;
         mvp_matrix = _projection * mv_matrix;
@@ -505,7 +468,7 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
         color_shader_.set_uniform("greyscale", (int)greyscale_);
 
         /** Currently lead to "invalid uniform location" errors, but might be useful later
-        *
+        * 
         color_shader_.set_uniform("modelview_matrix", mv_matrix);
         color_shader_.set_uniform("normal_matrix", m_matrix);
         color_shader_.set_uniform("light_position", light);
@@ -513,7 +476,7 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
 
         planet.tex_.bind();
         unit_sphere_.draw();
-    };
+        };
 
     draw_planet(mercury_);
     draw_planet(venus_);
@@ -523,8 +486,8 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
 
     //render spaceship
     m_matrix = mat4::translate(ship_.pos_) *
-               mat4::rotate_y(ship_.angle_) *
-               mat4::scale(ship_.get_scale());
+        mat4::rotate_y(ship_.angle_) *
+        mat4::scale(ship_.get_scale());
 
     mv_matrix = _view * m_matrix;
     mvp_matrix = _projection * mv_matrix;
@@ -536,6 +499,32 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
 
     ship_.tex_.bind();
     ship_.draw();
+
+    /** \todo Render the sun's halo here using the "color_shader_"
+*   - Construct a model matrix that scales the billboard to 3 times the
+*     sun's radius and orients it according to billboard_x_angle_ and
+*     billboard_y_angle_
+*   - Bind the texture for and draw sunglow_
+**/
+    glEnable(GL_BLEND);
+
+    m_matrix = mat4::rotate_y(billboard_y_angle_) * mat4::rotate_x(billboard_x_angle_)
+        * mat4::scale(sun_.radius_ * 3);
+    mv_matrix = (_view * m_matrix);
+    mvp_matrix = (_projection * mv_matrix);
+
+    color_shader_.use();
+    color_shader_.set_uniform("modelview_projection_matrix", mvp_matrix);
+
+    color_shader_.set_uniform("tex", 0);
+    color_shader_.set_uniform("greyscale", (int)greyscale_);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    sunglow_.tex_.bind();
+    sunglow_.draw();
+
+    glDisable(GL_BLEND);
 
     // check for OpenGL errors
     glCheckError();
