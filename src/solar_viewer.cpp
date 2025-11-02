@@ -197,28 +197,28 @@ void Solar_viewer::update_body_positions() {
 
 
     auto place_orbiting = [](const Planet &body, const vec4 &center) -> vec4 {
-        // Start at distance on the positive x-axis
+        // start at distance on the positive x-axis
         vec4 local_pos = vec4(body.distance_, 0.0f, 0.0f, 1.0f);
 
-        // Convert radians to degrees (rotate_y expects degrees)
+        // convert radians to degrees (rotate_y expects degrees)
         float angle_degrees = body.angle_orbit_ * 180.0f / (float)M_PI;
 
-        // Rotate clockwise around y-axis (negate angle for clockwise)
+        // rotate clockwise around y-axis (negate angle for clockwise)
         mat4 rotation = mat4::rotate_y(-angle_degrees);
         vec4 rotated_pos = rotation * local_pos;
 
-        // Translate to the center (orbit center)
+        // translate to the center (orbit center)
         mat4 translation = mat4::translate(vec3(center.x, center.y, center.z));
         return translation * rotated_pos;
     };
 
-    // Planets orbit the sun
+    // planets orbit the sun
     mercury_.pos_ = place_orbiting(mercury_, sun_.pos_);
     venus_  .pos_ = place_orbiting(venus_,   sun_.pos_);
     earth_  .pos_ = place_orbiting(earth_,   sun_.pos_);
     mars_   .pos_ = place_orbiting(mars_,    sun_.pos_);
 
-    // Moon orbits the earth
+    // moon orbits the earth
     moon_.pos_ = place_orbiting(moon_, earth_.pos_);
 
 }
@@ -334,7 +334,7 @@ void Solar_viewer::paint()
     vec4 eye, center, up = vec4(0,1,0,0);
 
     if (in_ship_) {
-        // Camera hovers behind and slightly above the ship
+        // camera hovers behind and slightly above the ship
         eye = ship_.pos_ - 2.0f * ship_.direction_ + vec4(0.0f, 0.5f, 0.0f, 0.0f);
         center = ship_.pos_;
     } else if (planet_to_look_at_ != nullptr) {
@@ -342,12 +342,12 @@ void Solar_viewer::paint()
         float radius = planet_to_look_at_->radius_;
         eye = center + vec4(0.0f, 0.0f, dist_factor_ * radius, 0.0f);
 
-        // Apply rotation around the target
+        // apply rotation around the target
         mat4 rot_x = mat4::rotate_x(x_angle_);
         mat4 rot_y = mat4::rotate_y(y_angle_);
         eye = rot_y * rot_x * (eye - center) + center;
     } else {
-        // Default view of the Sun
+        // default view of the sun
         center = sun_.pos_;
         eye = vec4(0,0,7,1);
     }
@@ -373,7 +373,8 @@ void Solar_viewer::paint()
     float pitch_rad = -asin(y_clamped);
     billboard_x_angle_ = pitch_rad * 180.0f / (float)M_PI;
 
-    // --- Draw the scene ---
+
+
     draw_scene(projection, view);
 
 }
@@ -384,20 +385,20 @@ void Solar_viewer::paint()
 void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
 {
     switch (curve_display_mode_) {
-        case CURVE_SHOW_PATH_FRAME:
-            ship_path_frame_.draw(solid_color_shader_, _projection * _view, ship_path_(ship_path_param_));
-        case CURVE_SHOW_PATH_CP:
-            solid_color_shader_.use();
-            solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
-            solid_color_shader_.set_uniform("color", vec4(0.8, 0.8, 0.8, 1.0));
-            ship_path_cp_renderer_.draw();
-        case CURVE_SHOW_PATH:
-            solid_color_shader_.use();
-            solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
-            solid_color_shader_.set_uniform("color", vec4(1.0, 0.0, 0.0, 1.0));
-            ship_path_renderer_.draw();
-        default:
-            break;
+    case CURVE_SHOW_PATH_FRAME:
+        ship_path_frame_.draw(solid_color_shader_, _projection * _view, ship_path_(ship_path_param_));
+    case CURVE_SHOW_PATH_CP:
+        solid_color_shader_.use();
+        solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
+        solid_color_shader_.set_uniform("color", vec4(0.8, 0.8, 0.8, 1.0));
+        ship_path_cp_renderer_.draw();
+    case CURVE_SHOW_PATH:
+        solid_color_shader_.use();
+        solid_color_shader_.set_uniform("modelview_projection_matrix", _projection * _view);
+        solid_color_shader_.set_uniform("color", vec4(1.0, 0.0, 0.0, 1.0));
+        ship_path_renderer_.draw();
+    default:
+        break;
     }
 
     // the matrices we need: model, modelview, modelview-projection, normal
