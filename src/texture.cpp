@@ -136,10 +136,12 @@ bool Texture::createSunBillboardTexture()
                 alpha = 1;
             }
             else if (dist_center < outer_radius) {
+
                 //modify alpha based on dist_center
                 float rel_dist = (outer_radius - dist_center) / (outer_radius - inner_radius);
-                float attenuate = 4.5; //soften glow strength towards edges
-                alpha = powf(rel_dist,attenuate);
+                
+                float attenuate = 3.5; //soften glow strength towards edges
+                alpha = powf(rel_dist, attenuate);
                 
                 G = std::max((200 * alpha), 90.0f); //add bright yellow highlight close to surface
             }
