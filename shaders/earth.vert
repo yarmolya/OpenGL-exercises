@@ -29,4 +29,22 @@ uniform vec4 light_position; //in eye space coordinates already
 void main()
 {
 
+       // vertex position in view space
+    vec4 vpos_vertex = modelview_matrix * v_position;
+
+    // vertex normals in view space
+    v2f_normal = normal_matrix * v_normal;
+
+    // light direction (l) in view space
+    v2f_light = vec3(light_position) - vec3(vpos_vertex);
+
+    // view direction (v) in view space
+    v2f_view = vec3(-vpos_vertex); //camera is at origin in view space
+
+    // texture coords are 2D and remain unchanged
+    v2f_texcoord = v_texcoord;
+
+    //final position
+    gl_Position = modelview_projection_matrix * v_position;
+
 }
