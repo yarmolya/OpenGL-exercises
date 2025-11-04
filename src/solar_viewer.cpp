@@ -17,15 +17,15 @@
 
 Solar_viewer::Solar_viewer(const char* _title, int _width, int _height)
     : GLFW_window(_title, _width, _height),
-      unit_sphere_(50), //level of tesselation
+    unit_sphere_(50), //level of tesselation
 
-      sun_    (0.0,              2.0*M_PI/26.0,   1.0f,    0.0f),
-      mercury_(2.0*M_PI/116.0f,  2.0*M_PI/58.5,   0.075f, -1.4f),
-      venus_  (2.0*M_PI/225.0f,  2.0*M_PI/243.0,  0.2f,   -2.2f),
-      earth_  (2.0*M_PI/365.0f,  2.0*M_PI,        0.25,   -3.3f),
-      moon_   (2.0*M_PI/27.0f,   0.0,  0.04,   -0.4f),
-      mars_   (2.0*M_PI/687.0f,  2.0*M_PI*24.0/25.0, 0.15,-5.0f),
-      stars_  (0.0, 0.0, 21.0, 0.0)
+    sun_    (0.0,              2.0*M_PI/26.0,   1.0f,    0.0f),
+    mercury_(2.0*M_PI/116.0f,  2.0*M_PI/58.5,   0.075f, -1.4f),
+    venus_  (2.0*M_PI/225.0f,  2.0*M_PI/243.0,  0.2f,   -2.2f),
+    earth_  (2.0*M_PI/365.0f,  2.0*M_PI,        0.25,   -3.3f),
+    moon_   (2.0*M_PI/27.0f,   0.0,  0.04,   -0.4f),
+    mars_   (2.0*M_PI/687.0f,  2.0*M_PI*24.0/25.0, 0.15,-5.0f),
+    stars_  (0.0, 0.0, 21.0, 0.0)
 {
     // start animation
     timer_active_ = true;
@@ -43,8 +43,8 @@ Solar_viewer::Solar_viewer(const char* _title, int _width, int _height)
 //-----------------------------------------------------------------------------
 
 void
-Solar_viewer::
-keyboard(int key, int /*scancode*/, int action, int /*mods*/)
+    Solar_viewer::
+    keyboard(int key, int /*scancode*/, int action, int /*mods*/)
 {
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
@@ -192,7 +192,7 @@ keyboard(int key, int /*scancode*/, int action, int /*mods*/)
 // around their orbits. This position is needed to set up the camera in the scene
 // (see Solar_viewer::paint)
 void Solar_viewer::update_body_positions() {
-    
+
     sun_.pos_ = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 
@@ -450,13 +450,13 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
     stars_.tex_.bind();
     unit_sphere_.draw();
 
-    
+
 
     //lambda function for simple planets
     auto draw_planet = [&](Planet& planet) {
         m_matrix = mat4::translate(planet.pos_) *
-            mat4::rotate_y(planet.angle_self_) *
-            mat4::scale(planet.radius_);
+                   mat4::rotate_y(planet.angle_self_) *
+                   mat4::scale(planet.radius_);
 
         mv_matrix = _view * m_matrix;
         mvp_matrix = _projection * mv_matrix;
@@ -472,18 +472,48 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
 
         planet.tex_.bind();
         unit_sphere_.draw();
-        };
+    };
 
     draw_planet(mercury_);
     draw_planet(venus_);
     draw_planet(mars_);
-    draw_planet(earth_);
+
+    // render Earth with special shader
+    m_matrix = mat4::translate(earth_.pos_) *
+               mat4::rotate_y(earth_.angle_self_) *
+               mat4::scale(earth_.radius_);
+
+    mv_matrix = _view * m_matrix;
+    mvp_matrix = _projection * mv_matrix;
+    mat3 normal_matrix = mat3(transpose(inverse(mv_matrix)));
+
+    earth_shader_.use();
+    earth_shader_.set_uniform("modelview_projection_matrix", mvp_matrix);
+    earth_shader_.set_uniform("modelview_matrix", mv_matrix);
+    earth_shader_.set_uniform("normal_matrix", normal_matrix);
+    earth_shader_.set_uniform("light_position", light);
+    earth_shader_.set_uniform("greyscale", (int)greyscale_);
+
+    // 4 textures for Earth
+    earth_shader_.set_uniform("day_texture", 0);
+    earth_.tex_.bind();
+
+    earth_shader_.set_uniform("night_texture", 1);
+    earth_.night_.bind();
+
+    earth_shader_.set_uniform("cloud_texture", 2);
+    earth_.cloud_.bind();
+
+    earth_shader_.set_uniform("gloss_texture", 3);
+    earth_.gloss_.bind();
+
+    unit_sphere_.draw();
     draw_planet(moon_);
 
     //render spaceship
     m_matrix = mat4::translate(ship_.pos_) *
-        mat4::rotate_y(ship_.angle_) *
-        mat4::scale(ship_.get_scale());
+               mat4::rotate_y(ship_.angle_) *
+               mat4::scale(ship_.get_scale());
 
     mv_matrix = _view * m_matrix;
     mvp_matrix = _projection * mv_matrix;
@@ -505,7 +535,7 @@ void Solar_viewer::draw_scene(mat4& _projection, mat4& _view)
     glEnable(GL_BLEND);
 
     m_matrix = mat4::rotate_y(billboard_y_angle_) * mat4::rotate_x(billboard_x_angle_)
-        * mat4::scale(sun_.radius_ * 3);
+               * mat4::scale(sun_.radius_ * 3);
     mv_matrix = (_view * m_matrix);
     mvp_matrix = (_projection * mv_matrix);
 
